@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // JSESSIONID 생성 못하도록
                 .authorizeHttpRequests(auth -> auth // URL 인가 규칙
                         .requestMatchers("/api/auth/**").permitAll() // 로그인 관련 인증 필요 X
+                        .requestMatchers("/api/test/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider());
