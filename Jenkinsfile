@@ -11,17 +11,6 @@ pipeline {                                // 파이프라인 선언 시작
       }
     }
 
-    stage('Provide .env (from Jenkins)') { // 2) .env 시크릿 주입 단계
-      steps {
-        // Jenkins Credentials에 등록해 둔 "Secret file"(.env)을 워크스페이스로 복사
-        // - credentialsId: Jenkins에 저장한 ID(예: stack-env)
-        // - variable: 임시 환경변수명(여기에 시크릿 파일 경로가 들어옴)
-        withCredentials([file(credentialsId: 'stack-env', variable: 'ENVFILE')]) {
-          sh 'cp "$ENVFILE" .env'          // 레포 루트(= docker-compose.yml 옆)에 .env 파일 배치
-        }
-      }
-    }
-
     stage('Build JAR') {                   // 3) 스프링 부트 JAR 빌드 단계
       steps {
         dir('GameDataServer') {            // Dockerfile과 gradlew가 있는 폴더로 이동
