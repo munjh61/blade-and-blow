@@ -22,18 +22,22 @@ pipeline {                                // 파이프라인 선언 시작
 
     stage('Build & Deploy (docker compose)') { // 4) 컨테이너 빌드/배포 단계
       steps {
-        // compose로 api 이미지를 빌드 (docker-compose.yml의 build.context 사용)
-        sh 'docker-compose -f docker-compose.yml build api'
-        // 서비스들을 원하는 상태로 맞춤(없으면 생성/있으면 갱신). -d: 백그라운드
-        // mysql도 정의되어 있으면 함께 켜짐(이미 실행 중이면 변경사항만 반영)
-        sh 'docker-compose -f docker-compose.yml up -d'
+        withCredentials([file(credentialsId: 'stack-env', variable: 'ENVFILE')]) {
+          // compose로 api 이미지를 빌드 (docker-compose.yml의 build.context 사용)
+          sh 'docker-compose -f docker-compose.yml build api'
+          // 서비스들을 원하는 상태로 맞춤(없으면 생성/있으면 갱신). -d: 백그라운드
+          // mysql도 정의되어 있으면 함께 켜짐(이미 실행 중이면 변경사항만 반영)
+          sh 'docker-compose -f docker-compose.yml up -d'
+        }
       }
     }
 
     stage('Verify') {                      // 5) 기본 검증 단계
       steps {
-        sh 'docker-compose -f docker-compose.yml ps'                          // 실행 중인 서비스 목록 확인
-        sh 'docker-compose -f docker-compose.yml logs --no-color api | tail -n 80 || true' // API 최근 로그 일부
+        withCredentials([file(credentialsId: 'stack-env', variable: 'ENVFILE')]) {
+          sh 'docker-compose -f docker-compose.yml ps'                          // 실행 중인 서비스 목록 확인
+          sh 'docker-compose -f docker-compose.yml logs --no-color api | tail -n 80 || true' // API 최근 로그 일부
+        }
       }
     }
   }
