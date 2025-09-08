@@ -51,3 +51,11 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// jar 파일 생성 시
+tasks.named('bootJar'){
+    archiveFileName = 'app.jar'
+    destinationDirectory = file("$projectDir")
+}
+
+tasks.named('jar'){enabled = false} // plain.jar 생성 방지
