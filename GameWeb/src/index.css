@@ -31,3 +31,13 @@
 .font-hakgyo {
   font-family: 'HakgyoansimDoldamB', sans-serif;
 }
+
+/* ===== 유틸 ===== */
+@layer utilities {
+  .only-one-line {
+    text-wrap: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+}
