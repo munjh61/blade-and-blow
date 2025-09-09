@@ -1,0 +1,33 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+@import 'tailwindcss';
+
+/* ===== Tailwind v4 theme tokens ===== */
+@theme {
+  --default-font-family: 'Pretendard', 'sans-serif';
+}
+
+/* ===== 폰트 페이스 ===== */
+/* 외곽선이 있는 폰트 */
+@font-face {
+  font-family: 'SDSamliphopangche_Outline';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts-20-12@1.0/SDSamliphopangche_Outline.woff')
+    format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+/* 칠판 필기 폰트 */
+@font-face {
+  font-family: 'HakgyoansimDoldamB';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2307-2@1.0/HakgyoansimDoldamB.woff2')
+    format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* ===== 폰트 유틸 ===== */
+.font-sds-outline {
+  font-family: 'SDSamliphopangche_Outline', sans-serif;
+}
+.font-hakgyo {
+  font-family: 'HakgyoansimDoldamB', sans-serif;
+}
