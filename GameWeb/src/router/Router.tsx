@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { OnBoardingPage } from '../Page/OnBoardingPage';
-import { UploadPage } from '../Page/UploadPage';
 import { MainPage } from '../Page/MainPage';
+import { TestPage } from '../Page/TestPage';
 
 function RootRedirect() {
   const isLoggedIn = true;
@@ -22,7 +22,7 @@ export const Router = () => {
         {/* 권한 */}
         <Route element={<PrivateRoute />}>
           <Route path="/main" element={<MainPage />} />
-          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/test" element={<TestPage />} />
         </Route>
 
         {/* 잘못된 경로 */}

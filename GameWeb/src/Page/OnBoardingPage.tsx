@@ -1,3 +1,9 @@
+import { Dots } from '../components/atoms/buttons/Dots';
+
 export function OnBoardingPage() {
-  return <div></div>;
+  return (
+    <div>
+      <Dots>OnBoardingPage</Dots>
+    </div>
+  );
 }
