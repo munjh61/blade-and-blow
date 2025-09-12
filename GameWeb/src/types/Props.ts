@@ -9,3 +9,13 @@ export type ButtonProps = {
   className?: string;
   icon?: IconType;
 } & VariantProps<typeof Variants>;
+
+export type TextProps = {
+  text?: string;
+  className?: string;
+};
+
+export type SubTitleAndContent = {
+  st: string;
+  sc: string;
+};

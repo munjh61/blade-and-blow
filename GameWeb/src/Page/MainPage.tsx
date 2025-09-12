@@ -1,10 +1,11 @@
-import { Dots } from '../components/atoms/buttons/Dots';
-import { IoMdDownload } from 'react-icons/io';
+import { Header } from '../components/common/Header';
+import { MainTemplate } from '../components/templates/MainTemplate';
 
 export const MainPage = () => {
   return (
     <div>
-      <Dots icon={IoMdDownload}>MainPage</Dots>
+      <Header />
+      <MainTemplate />
     </div>
   );
 };

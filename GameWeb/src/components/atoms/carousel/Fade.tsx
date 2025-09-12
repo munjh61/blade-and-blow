@@ -1,32 +1,37 @@
-import Slider from 'react-slick'; // ✅ 올바른 import
+import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-import { IMG_PNG } from '../../../types/Path';
+import type { TextProps } from '../../../types/Props';
+import pic1 from '../../../assets/png/pic1.png';
+import pic2 from '../../../assets/png/pic2.png';
+import pic3 from '../../../assets/png/pic3.png';
 
-function Fade() {
+function Fade({ className }: TextProps) {
   const settings = {
-    dots: true,
     fade: true,
     infinite: true,
-    speed: 200,
+    arrows: false,
+    speed: 1000,
     slidesToShow: 1,
     slidesToScroll: 1,
+    centerMode: true,
     waitForAnimate: false,
+    autoplay: true,
+    autoplayspeed: 1,
+    pauseOnHover: true,
   };
-  const images = ['pic1', 'pic2', 'pic3'];
+  const images = [pic1, pic2, pic3];
   return (
-    <div className="slider-container">
-      <Slider {...settings}>
-        {images.map((file, idx) => (
-          <div className="aspect-[16/9] w-full">
-            <img
-              src={`${IMG_PNG}${file}.png`}
-              alt={`slide-${idx + 1}`}
-              className="object-cover w-full h-full"
-            />
-          </div>
-        ))}
-      </Slider>
+    <div className={className}>
+      <div className="slider-container">
+        <Slider {...settings}>
+          {images.map((pic, idx) => (
+            <div>
+              <img src={pic} alt={`slide-${idx + 1}`} />
+            </div>
+          ))}
+        </Slider>
+      </div>
     </div>
   );
 }
