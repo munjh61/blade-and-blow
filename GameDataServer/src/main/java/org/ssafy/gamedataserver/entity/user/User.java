@@ -1,4 +1,4 @@
-package org.ssafy.gamedataserver.entity;
+package org.ssafy.gamedataserver.entity.user;
 
 import jakarta.persistence.*;
 import lombok.*;

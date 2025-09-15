@@ -1,6 +1,7 @@
 package org.ssafy.gamedataserver.security;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -12,8 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.ssafy.gamedataserver.dto.ResponseDTO;
-import org.ssafy.gamedataserver.entity.Role;
-import org.ssafy.gamedataserver.entity.User;
+import org.ssafy.gamedataserver.dto.user.UserDTO;
+import org.ssafy.gamedataserver.entity.user.Role;
+import org.ssafy.gamedataserver.entity.user.User;
 import org.ssafy.gamedataserver.repository.UserRepository;
 
 import java.util.Collections;
@@ -30,9 +32,18 @@ public class AuthController {
 
     // 회원가입
     @PostMapping("/signup")
-    public ResponseEntity<ResponseDTO<Void>> signup(@RequestBody Map<String, String> request) {
-        String username = request.get("username");
-        String password = passwordEncoder.encode(request.get("password"));
+    public ResponseEntity<ResponseDTO<Void>> signup(@RequestBody UserDTO request) {
+        String username = request.getUsername();
+        String password = passwordEncoder.encode(request.getPassword());
+
+        boolean isAlreadyTaken = userRepository.existsByUsername(username);
+        boolean shortPassword = password.length() < 8;
+        if(isAlreadyTaken){
+            return new ResponseEntity<>(ResponseDTO.fail("이미 존재하는 아이디입니다.", HttpStatus.CONFLICT), HttpStatus.CONFLICT);
+        }
+        if(shortPassword){
+            return new ResponseEntity<>(ResponseDTO.fail("비밀번호가 8자리 미만입니다.", HttpStatus.BAD_REQUEST), HttpStatus.BAD_REQUEST);
+        }
 
         User user = User.builder()
                 .username(username)
@@ -48,9 +59,9 @@ public class AuthController {
 
     // 로그인 → JWT 발급
     @PostMapping("/login")
-    public ResponseEntity<ResponseDTO<Map<String, String>>> login(@RequestBody Map<String, String> request) {
-        String username = request.get("username");
-        String password = request.get("password");
+    public ResponseEntity<ResponseDTO<Map<String, String>>> login(@RequestBody UserDTO request) {
+        String username = request.getUsername();
+        String password = passwordEncoder.encode(request.getPassword());
         //로그인 검증
         try {
             authenticationManager.authenticate(
@@ -63,12 +74,12 @@ public class AuthController {
 
         } catch (BadCredentialsException e) {
             return ResponseEntity
-                    .status(401)
-                    .body(ResponseDTO.fail("아이디 또는 비밀번호가 잘못되었습니다."));
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(ResponseDTO.fail("아이디 또는 비밀번호가 틀렸습니다.", HttpStatus.UNAUTHORIZED));
         } catch (UsernameNotFoundException e) {
             return ResponseEntity
-                    .status(401)
-                    .body(ResponseDTO.fail("존재하지 않는 사용자입니다."));
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(ResponseDTO.fail("존재하지 않는 사용자입니다.",HttpStatus.UNAUTHORIZED));
         }
         // 내부적으로 이렇게 돌아감 authenticationManager ->
         // DaoAuthenticationProvider ->
