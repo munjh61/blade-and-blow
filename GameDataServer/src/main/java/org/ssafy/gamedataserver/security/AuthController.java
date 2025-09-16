@@ -31,6 +31,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final SessionVersionService sessionVersionService;
 
     // 회원가입
     @PostMapping("/signup")
@@ -40,10 +41,10 @@ public class AuthController {
 
         boolean isAlreadyTaken = userRepository.existsByUsername(username);
         boolean shortPassword = password.length() < 8;
-        if(isAlreadyTaken){
+        if (isAlreadyTaken) {
             return new ResponseEntity<>(ResponseDTO.fail("이미 존재하는 아이디입니다.", HttpStatus.CONFLICT), HttpStatus.CONFLICT);
         }
-        if(shortPassword){
+        if (shortPassword) {
             return new ResponseEntity<>(ResponseDTO.fail("비밀번호가 8자리 미만입니다.", HttpStatus.BAD_REQUEST), HttpStatus.BAD_REQUEST);
         }
 
@@ -69,8 +70,11 @@ public class AuthController {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password)
             );
-            String accessToken = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS);
-            String refreshToken = jwtProvider.generateToken(username, JwtProvider.TokenType.REFRESH);
+
+            long ver = sessionVersionService.setUserVersion(username);
+
+            String accessToken = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS, ver);
+            String refreshToken = jwtProvider.generateToken(username, JwtProvider.TokenType.REFRESH, ver);
             return ResponseEntity.ok(
                     ResponseDTO.ok("로그인 성공", Map.of("accessToken", accessToken, "refreshToken", refreshToken))
             );
@@ -82,7 +86,7 @@ public class AuthController {
         } catch (UsernameNotFoundException e) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body(ResponseDTO.fail("존재하지 않는 사용자입니다.",HttpStatus.UNAUTHORIZED));
+                    .body(ResponseDTO.fail("존재하지 않는 사용자입니다.", HttpStatus.UNAUTHORIZED));
         }
         // 내부적으로 이렇게 돌아감 authenticationManager ->
         // DaoAuthenticationProvider ->
@@ -99,14 +103,21 @@ public class AuthController {
                     .badRequest()
                     .body(ResponseDTO.fail("refreshToken이 없습니다.", HttpStatus.BAD_REQUEST));
         }
-        try{
-            if(!jwtProvider.isRefreshToken(refreshToken)){
+        try {
+            if (!jwtProvider.isRefreshToken(refreshToken)) {
                 return ResponseEntity
                         .badRequest()
                         .body(ResponseDTO.fail("유효하지 않은 refreshToken 값입니다.", HttpStatus.UNAUTHORIZED));
             }
             String username = jwtProvider.getUsername(refreshToken);
-            String newAccess = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS);
+            long tokenVer = jwtProvider.getVersion(refreshToken);
+            long serverVer = sessionVersionService.getUserVersion(username);
+            if (tokenVer != serverVer) {
+                return ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body(ResponseDTO.fail("다른 곳에서 해당 아이디로 로그인하여 해당 refresh 토큰이 유효하지 않습니다.", HttpStatus.UNAUTHORIZED));
+            }
+            String newAccess = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS, serverVer);
             return ResponseEntity.ok(
                     ResponseDTO.ok("accessToken이 발급되었습니다.", Map.of("accessToken", newAccess))
             );

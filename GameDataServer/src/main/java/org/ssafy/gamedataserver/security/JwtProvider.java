@@ -17,6 +17,7 @@ import java.util.Date;
 @Component
 public class JwtProvider {
     public enum TokenType {ACCESS, REFRESH}
+
     private static final String CLAIM_TOKEN_TYPE = "token_type";
 
     private final Key key;
@@ -35,8 +36,9 @@ public class JwtProvider {
         this.accessMinutes = accessMinutes;
         this.refreshDays = refreshDays;
     }
+
     // 토큰 생성
-    public String generateToken(String username, TokenType tokenType) {
+    public String generateToken(String username, TokenType tokenType, long ver) {
         Instant now = Instant.now();
         Duration life = (tokenType == TokenType.ACCESS)
                 ? Duration.ofMinutes(accessMinutes)
@@ -47,9 +49,11 @@ public class JwtProvider {
                 .setIssuedAt(Date.from(now))
                 .setExpiration(expiry)
                 .claim(CLAIM_TOKEN_TYPE, tokenType)
+                .claim("ver", ver)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
+
     // 토큰에서 사용자명 추출
     public String getUsername(String token) {
         return Jwts.parserBuilder()
@@ -57,9 +61,10 @@ public class JwtProvider {
                 .build()
                 .parseClaimsJws(token).getBody().getSubject();
     }
+
     // 토큰 유효성 검사
     public boolean isTokenValid(String token) {
-        try{
+        try {
             Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
@@ -69,6 +74,7 @@ public class JwtProvider {
             return false;
         }
     }
+
     // 클레임 확인
     public Claims getClaims(String token) {
         return Jwts.parserBuilder().
@@ -76,13 +82,19 @@ public class JwtProvider {
                 build()
                 .parseClaimsJws(token).getBody();
     }
-    // 클레임에서 리프레시 토큰 확인
+
+    // 리프레시 토큰
     public boolean isRefreshToken(String token) {
         try {
-            TokenType t = getClaims(token).get("token_type", TokenType.class);
+            TokenType t = getClaims(token).get(CLAIM_TOKEN_TYPE, TokenType.class);
             return TokenType.REFRESH.equals(t);
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
+    }
+
+    // 버전
+    public long getVersion(String token) {
+        return getClaims(token).get("ver", Long.class);
     }
 }
