@@ -1,5 +1,7 @@
 package org.ssafy.gamedataserver.security;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +24,7 @@ import java.util.Collections;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthenticationManager authenticationManager;
@@ -61,15 +63,16 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ResponseDTO<Map<String, String>>> login(@RequestBody UserDTO request) {
         String username = request.getUsername();
-        String password = passwordEncoder.encode(request.getPassword());
+        String password = request.getPassword();
         //로그인 검증
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password)
             );
-            String token = jwtProvider.generateToken(username);
+            String accessToken = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS);
+            String refreshToken = jwtProvider.generateToken(username, JwtProvider.TokenType.REFRESH);
             return ResponseEntity.ok(
-                    ResponseDTO.ok("로그인 성공", Map.of("accessToken", token))
+                    ResponseDTO.ok("로그인 성공", Map.of("accessToken", accessToken, "refreshToken", refreshToken))
             );
 
         } catch (BadCredentialsException e) {
@@ -85,6 +88,34 @@ public class AuthController {
         // DaoAuthenticationProvider ->
         // 1. CustomUserDetailsService.loadUserByUsername(username) 호출,
         // 2. PawwsordEncoder.mathces(raw, encoded) 검증,
+    }
 
+    // 리프레시 토큰으로 엑세스 토큰 생성
+    @PostMapping("/refresh")
+    public ResponseEntity<ResponseDTO<Map<String, String>>> refreshToken(@RequestBody RefreshTokenDTO request) {
+        String refreshToken = request.getRefreshToken();
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(ResponseDTO.fail("refreshToken이 없습니다.", HttpStatus.BAD_REQUEST));
+        }
+        try{
+            if(!jwtProvider.isRefreshToken(refreshToken)){
+                return ResponseEntity
+                        .badRequest()
+                        .body(ResponseDTO.fail("유효하지 않은 refreshToken 값입니다.", HttpStatus.UNAUTHORIZED));
+            }
+            String username = jwtProvider.getUsername(refreshToken);
+            String newAccess = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS);
+            return ResponseEntity.ok(
+                    ResponseDTO.ok("accessToken이 발급되었습니다.", Map.of("accessToken", newAccess))
+            );
+        } catch (ExpiredJwtException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ResponseDTO.fail("리프레시 토큰이 만료되었습니다.", HttpStatus.UNAUTHORIZED));
+        } catch (JwtException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ResponseDTO.fail("리프레시 토큰이 유효하지 않습니다.", HttpStatus.UNAUTHORIZED));
+        }
     }
 }

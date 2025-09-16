@@ -69,8 +69,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(ccfs())) // cors
                 .sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // JSESSIONID 생성 못하도록
                 .authorizeHttpRequests(auth -> auth // URL 인가 규칙
-                        .requestMatchers("/api/auth/**").permitAll() // 로그인 관련 인증 필요 X
-                        .requestMatchers("/api/test/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll() // 로그인 관련 인증 필요 X
+                        .requestMatchers("/api/v1/public/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider());
