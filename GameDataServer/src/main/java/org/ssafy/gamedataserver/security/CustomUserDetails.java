@@ -5,8 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.ssafy.gamedataserver.entity.Role;
-import org.ssafy.gamedataserver.entity.User;
+import org.ssafy.gamedataserver.entity.user.Role;
+import org.ssafy.gamedataserver.entity.user.User;
 
 import java.util.Collection;
 import java.util.Set;

@@ -26,7 +26,7 @@ function Fade({ className }: TextProps) {
       <div className="slider-container">
         <Slider {...settings}>
           {images.map((pic, idx) => (
-            <div>
+            <div key={idx}>
               <img src={pic} alt={`slide-${idx + 1}`} />
             </div>
           ))}

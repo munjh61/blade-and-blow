@@ -1,4 +1,4 @@
-package org.ssafy.gamedataserver.entity;
+package org.ssafy.gamedataserver.entity.user;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,6 +24,8 @@ public class User {
     private String username;
     @Column(nullable = false)
     private String password;
+    @Column(nullable = false)
+    private String nickname;
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
     @CollectionTable(

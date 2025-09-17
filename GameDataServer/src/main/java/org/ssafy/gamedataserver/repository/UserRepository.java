@@ -1,7 +1,7 @@
 package org.ssafy.gamedataserver.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.ssafy.gamedataserver.entity.User;
+import org.ssafy.gamedataserver.entity.user.User;
 
 import java.util.Optional;
 
