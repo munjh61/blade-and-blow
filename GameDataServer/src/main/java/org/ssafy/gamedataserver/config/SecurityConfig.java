@@ -48,7 +48,7 @@ public class SecurityConfig {
         // 어떤 config인지 설정
         CorsConfiguration ccf = new CorsConfiguration();
         ccf.setAllowedOrigins(List.of(
-                "http://localhost:5173","https://localhost:5173",
+//                "http://localhost:5173","https://localhost:5173",
                 "http://j13a405.p.ssafy.io","https://j13a405.p.ssafy.io",
                 "http://3.36.183.255","https://3.36.183.255"
         ));
