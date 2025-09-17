@@ -10,18 +10,17 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.ssafy.gamedataserver.dto.ResponseDTO;
 import org.ssafy.gamedataserver.dto.user.UserDTO;
+import org.ssafy.gamedataserver.dto.user.UserSignUpDTO;
 import org.ssafy.gamedataserver.entity.user.Role;
 import org.ssafy.gamedataserver.entity.user.User;
 import org.ssafy.gamedataserver.repository.UserRepository;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -35,9 +34,10 @@ public class AuthController {
 
     // 회원가입
     @PostMapping("/signup")
-    public ResponseEntity<ResponseDTO<Void>> signup(@RequestBody UserDTO request) {
+    public ResponseEntity<ResponseDTO<Void>> signup(@RequestBody UserSignUpDTO request) {
         String username = request.getUsername();
         String password = passwordEncoder.encode(request.getPassword());
+        String nickname = request.getNickname();
 
         boolean isAlreadyTaken = userRepository.existsByUsername(username);
         boolean shortPassword = password.length() < 8;
@@ -51,6 +51,7 @@ public class AuthController {
         User user = User.builder()
                 .username(username)
                 .password(password)
+                .nickname(nickname)
                 .roles(Collections.singleton(Role.USER))
                 .build();
 
@@ -75,15 +76,17 @@ public class AuthController {
 
             String accessToken = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS, ver);
             String refreshToken = jwtProvider.generateToken(username, JwtProvider.TokenType.REFRESH, ver);
+            String nickname = userRepository.findByUsername(username).get().getNickname();
+
             return ResponseEntity.ok(
-                    ResponseDTO.ok("로그인 성공", Map.of("accessToken", accessToken, "refreshToken", refreshToken))
+                    ResponseDTO.ok("로그인 성공", Map.of("nickname",nickname,"accessToken", accessToken, "refreshToken", refreshToken))
             );
 
         } catch (BadCredentialsException e) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(ResponseDTO.fail("아이디 또는 비밀번호가 틀렸습니다.", HttpStatus.UNAUTHORIZED));
-        } catch (UsernameNotFoundException e) {
+        } catch (UsernameNotFoundException | NoSuchElementException e) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(ResponseDTO.fail("존재하지 않는 사용자입니다.", HttpStatus.UNAUTHORIZED));
@@ -101,13 +104,13 @@ public class AuthController {
         if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseEntity
                     .badRequest()
-                    .body(ResponseDTO.fail("refreshToken이 없습니다.", HttpStatus.BAD_REQUEST));
+                    .body(ResponseDTO.fail("리프레시 토큰이 없습니다.", HttpStatus.BAD_REQUEST));
         }
         try {
             if (!jwtProvider.isRefreshToken(refreshToken)) {
                 return ResponseEntity
                         .badRequest()
-                        .body(ResponseDTO.fail("유효하지 않은 refreshToken 값입니다.", HttpStatus.UNAUTHORIZED));
+                        .body(ResponseDTO.fail("유효하지 않은 리프레시 토큰 값입니다.", HttpStatus.UNAUTHORIZED));
             }
             String username = jwtProvider.getUsername(refreshToken);
             long tokenVer = jwtProvider.getVersion(refreshToken);
@@ -115,7 +118,7 @@ public class AuthController {
             if (tokenVer != serverVer) {
                 return ResponseEntity
                         .status(HttpStatus.UNAUTHORIZED)
-                        .body(ResponseDTO.fail("다른 곳에서 해당 아이디로 로그인하여 해당 refresh 토큰이 유효하지 않습니다.", HttpStatus.UNAUTHORIZED));
+                        .body(ResponseDTO.fail("리프레시 토큰 버전이 유효하지 않습니다.", HttpStatus.UNAUTHORIZED));
             }
             String newAccess = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS, serverVer);
             return ResponseEntity.ok(
@@ -129,4 +132,5 @@ public class AuthController {
                     .body(ResponseDTO.fail("리프레시 토큰이 유효하지 않습니다.", HttpStatus.UNAUTHORIZED));
         }
     }
+
 }

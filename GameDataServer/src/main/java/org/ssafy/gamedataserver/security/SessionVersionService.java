@@ -14,7 +14,7 @@ public class SessionVersionService {
     }
 
     public long setUserVersion(String username) {
-        // 동시성 문제로 get 한 다음 set 하면 안되고 merge 사용해야한다.
+        // 동시성 문제로 get, set 하면 안되고 merge 함수를 사용함.
         return userVersions.merge(username, 1L, Long::sum);
     }
 }
