@@ -46,7 +46,7 @@ public class AuthController {
         String nickname = request.getNickname();
 
         boolean isAlreadyTaken = userRepository.existsByUsername(username);
-        boolean shortPassword = password.length() < 8;
+        boolean shortPassword = request.getPassword().length() < 8;
         if (isAlreadyTaken) {
             return new ResponseEntity<>(ResponseDTO.fail("이미 존재하는 아이디입니다.", HttpStatus.CONFLICT), HttpStatus.CONFLICT);
         }
