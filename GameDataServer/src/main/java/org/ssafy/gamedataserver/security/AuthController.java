@@ -32,6 +32,12 @@ public class AuthController {
     private final JwtProvider jwtProvider;
     private final SessionVersionService sessionVersionService;
 
+    @GetMapping("/ping")
+    public ResponseEntity<ResponseDTO<Map<String,String>>> test(){
+        String msg = "connect success";
+        return ResponseEntity.ok(ResponseDTO.ok("test success", Map.of("msg",msg)));
+    }
+
     // 회원가입
     @PostMapping("/signup")
     public ResponseEntity<ResponseDTO<Void>> signup(@RequestBody UserSignUpDTO request) {
