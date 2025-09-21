@@ -104,7 +104,7 @@ public class AuthController {
         if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseEntity
                     .badRequest()
-                    .body(ResponseDTO.fail("리프레시 토큰이 아닙니다.", HttpStatus.BAD_REQUEST));
+                    .body(ResponseDTO.fail("리프레시 토큰이 없습니다.", HttpStatus.BAD_REQUEST));
         }
         try {
             if (!jwtProvider.isRefreshToken(refreshToken)) {
