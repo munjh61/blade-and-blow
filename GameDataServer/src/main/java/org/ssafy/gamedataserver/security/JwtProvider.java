@@ -86,8 +86,8 @@ public class JwtProvider {
     // 리프레시 토큰
     public boolean isRefreshToken(String token) {
         try {
-            TokenType t = getClaims(token).get(CLAIM_TOKEN_TYPE, TokenType.class);
-            return TokenType.REFRESH.equals(t);
+            String type = getClaims(token).get(CLAIM_TOKEN_TYPE, String.class);
+            return "REFRESH".equals(type);
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
