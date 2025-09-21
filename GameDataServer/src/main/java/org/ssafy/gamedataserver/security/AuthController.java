@@ -94,7 +94,7 @@ public class AuthController {
         // 내부적으로 이렇게 돌아감 authenticationManager ->
         // DaoAuthenticationProvider ->
         // 1. CustomUserDetailsService.loadUserByUsername(username) 호출,
-        // 2. PawwsordEncoder.mathces(raw, encoded) 검증,
+        // 2. PasswordEncoder.matches(raw, encoded) 검증,
     }
 
     // 리프레시 토큰으로 엑세스 토큰 생성
@@ -104,13 +104,13 @@ public class AuthController {
         if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseEntity
                     .badRequest()
-                    .body(ResponseDTO.fail("리프레시 토큰이 없습니다.", HttpStatus.BAD_REQUEST));
+                    .body(ResponseDTO.fail("리프레시 토큰이 아닙니다.", HttpStatus.BAD_REQUEST));
         }
         try {
             if (!jwtProvider.isRefreshToken(refreshToken)) {
                 return ResponseEntity
                         .badRequest()
-                        .body(ResponseDTO.fail("유효하지 않은 리프레시 토큰 값입니다.", HttpStatus.UNAUTHORIZED));
+                        .body(ResponseDTO.fail("리프레시 토큰이 아닙니다.", HttpStatus.UNAUTHORIZED));
             }
             String username = jwtProvider.getUsername(refreshToken);
             long tokenVer = jwtProvider.getVersion(refreshToken);
