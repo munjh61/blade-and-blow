@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.ssafy.gamedataserver.dto.ResponseDTO;
+import org.ssafy.gamedataserver.dto.user.UserNicknameDTO;
 import org.ssafy.gamedataserver.entity.user.User;
 import org.ssafy.gamedataserver.repository.UserRepository;
 
@@ -20,14 +21,16 @@ public class UserController {
 
     // 닉네임 조회
     @GetMapping("/me")
-    public ResponseEntity<ResponseDTO<String>> getNickname() {
+    public ResponseEntity<ResponseDTO<UserNicknameDTO>> getNickname() {
         if (getCurrentUser().isPresent()) {
-        User user = getCurrentUser().get();
-        return ResponseEntity.ok(ResponseDTO.ok("본인 조회 성공", user.getNickname()));
+            User user = getCurrentUser().get();
+            UserNicknameDTO dto = new UserNicknameDTO();
+            dto.setNickname(user.getNickname());
+            return ResponseEntity.ok(ResponseDTO.ok("본인 조회 성공", dto));
         }
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(ResponseDTO.fail("해당 유저가 존재하지 않습니다.",HttpStatus.NOT_FOUND));
+                .body(ResponseDTO.fail("해당 유저가 존재하지 않습니다.", HttpStatus.NOT_FOUND));
     }
 
     // 닉네임 변경
@@ -41,7 +44,7 @@ public class UserController {
         }
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(ResponseDTO.fail("해당 유저가 존재하지 않습니다.",HttpStatus.NOT_FOUND));
+                .body(ResponseDTO.fail("해당 유저가 존재하지 않습니다.", HttpStatus.NOT_FOUND));
     }
 
     // 조회
