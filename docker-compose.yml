@@ -20,6 +20,14 @@ services:
 
   redis:
     image: redis:7.4-alpine
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD}",
+      ]
     volumes:
       - /data/redis:/data
     ports:
