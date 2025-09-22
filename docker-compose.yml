@@ -18,6 +18,14 @@ services:
       - --skip-name-resolve
     restart: unless-stopped
 
+  redis:
+    image: redis:7.4-alpine
+    volumes:
+      - /data/redis:/data
+    ports:
+      - 127.0.0.1:6379:6379
+    restart: unless-stopped
+
   api:
     build:
       context: ./GameDataServer
@@ -27,8 +35,12 @@ services:
       GAME_DB_PASSWORD: ${MYSQL_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       TZ: Asia/Seoul
+      REDIS_PORT: 6379
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
       - "127.0.0.1:8081:8080"
     restart: unless-stopped
     depends_on:
       - mysql
+      - redis
