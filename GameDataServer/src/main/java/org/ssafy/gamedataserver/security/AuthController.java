@@ -42,10 +42,10 @@ public class AuthController {
         boolean isAlreadyTaken = userRepository.existsByUsername(username);
         boolean shortPassword = request.getPassword().length() < 8;
         if (isAlreadyTaken) {
-            return new ResponseEntity<>(ResponseDTO.fail("이미 존재하는 아이디입니다.", HttpStatus.CONFLICT), HttpStatus.CONFLICT);
+            return new ResponseEntity<>(ResponseDTO.fail("ID already exist", HttpStatus.CONFLICT), HttpStatus.CONFLICT);
         }
         if (shortPassword) {
-            return new ResponseEntity<>(ResponseDTO.fail("비밀번호가 8자리 미만입니다.", HttpStatus.BAD_REQUEST), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(ResponseDTO.fail("Password is has to be longer than 8 letters", HttpStatus.BAD_REQUEST), HttpStatus.BAD_REQUEST);
         }
 
         User user = User.builder()
@@ -57,7 +57,7 @@ public class AuthController {
 
         userRepository.save(user);
         return ResponseEntity.ok(
-                ResponseDTO.ok("회원가입 성공", null)
+                ResponseDTO.ok("Welcome!", null)
         );
     }
 
@@ -79,17 +79,17 @@ public class AuthController {
             String nickname = userRepository.findByUsername(username).get().getNickname();
 
             return ResponseEntity.ok(
-                    ResponseDTO.ok("로그인 성공", Map.of("nickname",nickname,"accessToken", accessToken, "refreshToken", refreshToken))
+                    ResponseDTO.ok("Login successful", Map.of("nickname",nickname,"accessToken", accessToken, "refreshToken", refreshToken))
             );
 
         } catch (BadCredentialsException e) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body(ResponseDTO.fail("아이디 또는 비밀번호가 틀렸습니다.", HttpStatus.UNAUTHORIZED));
+                    .body(ResponseDTO.fail("ID or Password is wrong", HttpStatus.UNAUTHORIZED));
         } catch (UsernameNotFoundException | NoSuchElementException e) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body(ResponseDTO.fail("존재하지 않는 사용자입니다.", HttpStatus.UNAUTHORIZED));
+                    .body(ResponseDTO.fail("ID or Password is wrong", HttpStatus.UNAUTHORIZED)); // 아이디가 없는 거지만, 티를 내면 안됨
         }
         // 내부적으로 이렇게 돌아감 authenticationManager ->
         // DaoAuthenticationProvider ->
@@ -104,13 +104,13 @@ public class AuthController {
         if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseEntity
                     .badRequest()
-                    .body(ResponseDTO.fail("리프레시 토큰이 없습니다.", HttpStatus.BAD_REQUEST));
+                    .body(ResponseDTO.fail("No Refresh Token", HttpStatus.BAD_REQUEST));
         }
         try {
             if (!jwtProvider.isRefreshToken(refreshToken)) {
                 return ResponseEntity
                         .badRequest()
-                        .body(ResponseDTO.fail("리프레시 토큰이 아닙니다.", HttpStatus.UNAUTHORIZED));
+                        .body(ResponseDTO.fail("Is Not Refresh Token", HttpStatus.UNAUTHORIZED));
             }
             String username = jwtProvider.getUsername(refreshToken);
             long tokenVer = jwtProvider.getVersion(refreshToken);
@@ -118,18 +118,18 @@ public class AuthController {
             if (tokenVer != serverVer) {
                 return ResponseEntity
                         .status(HttpStatus.UNAUTHORIZED)
-                        .body(ResponseDTO.fail("리프레시 토큰 버전이 유효하지 않습니다.", HttpStatus.UNAUTHORIZED));
+                        .body(ResponseDTO.fail("Somebody Log in with your ID", HttpStatus.UNAUTHORIZED));
             }
             String newAccess = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS, serverVer);
             return ResponseEntity.ok(
-                    ResponseDTO.ok("accessToken이 발급되었습니다.", Map.of("accessToken", newAccess))
+                    ResponseDTO.ok("Got a New accessToken", Map.of("accessToken", newAccess))
             );
         } catch (ExpiredJwtException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ResponseDTO.fail("리프레시 토큰이 만료되었습니다.", HttpStatus.UNAUTHORIZED));
+                    .body(ResponseDTO.fail("Refresh Token Expired", HttpStatus.UNAUTHORIZED));
         } catch (JwtException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ResponseDTO.fail("리프레시 토큰이 유효하지 않습니다.", HttpStatus.UNAUTHORIZED));
+                    .body(ResponseDTO.fail("Refresh Token Not Valid", HttpStatus.UNAUTHORIZED));
         }
     }
 

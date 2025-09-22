@@ -26,11 +26,11 @@ public class UserController {
             User user = getCurrentUser().get();
             UserNicknameDTO dto = new UserNicknameDTO();
             dto.setNickname(user.getNickname());
-            return ResponseEntity.ok(ResponseDTO.ok("본인 조회 성공", dto));
+            return ResponseEntity.ok(ResponseDTO.ok("nickname checked successfully!", dto));
         }
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(ResponseDTO.fail("해당 유저가 존재하지 않습니다.", HttpStatus.NOT_FOUND));
+                .body(ResponseDTO.fail("user does not exist", HttpStatus.NOT_FOUND));
     }
 
     // 닉네임 변경
@@ -40,11 +40,11 @@ public class UserController {
             User user = getCurrentUser().get();
             user.setNickname(nickname);
             userRepository.save(user);
-            return ResponseEntity.ok(ResponseDTO.ok("닉네임이 변경되었습니다.", null));
+            return ResponseEntity.ok(ResponseDTO.ok("nickname changed successfully", null));
         }
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(ResponseDTO.fail("해당 유저가 존재하지 않습니다.", HttpStatus.NOT_FOUND));
+                .body(ResponseDTO.fail("user does not exist", HttpStatus.NOT_FOUND));
     }
 
     // 조회
