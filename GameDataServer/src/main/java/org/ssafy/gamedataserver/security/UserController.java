@@ -34,7 +34,7 @@ public class UserController {
     }
 
     // 닉네임 변경
-    @PostMapping("/nickname")
+    @PutMapping("/nickname")
     public ResponseEntity<ResponseDTO<Void>> changeNickname(@RequestParam String nickname) {
         if (getCurrentUser().isPresent()) {
             User user = getCurrentUser().get();
