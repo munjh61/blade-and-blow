@@ -1,4 +1,4 @@
-package org.ssafy.gamedataserver.dto.stat;
+package org.ssafy.gamedataserver.dto.battle;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -8,9 +8,9 @@ import lombok.Setter;
 @Setter
 @Builder
 public class WeaponDTO {
-    private long win;
-    private long lose;
-    private long kill;
-    private long death;
+    private long wins;
+    private long losses;
+    private long kills;
+    private long deaths;
     private long damage;
 }

@@ -5,8 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.ssafy.gamedataserver.dto.stat.BattleStatModeDTO;
-import org.ssafy.gamedataserver.dto.stat.WeaponDTO;
+import org.ssafy.gamedataserver.dto.battle.BattleStatModeDTO;
+import org.ssafy.gamedataserver.dto.battle.WeaponDTO;
 import org.ssafy.gamedataserver.entity.battle.Mode;
 import org.ssafy.gamedataserver.entity.battle.BattleStat;
 import org.ssafy.gamedataserver.entity.battle.Weapon;
@@ -44,7 +44,7 @@ public class BattleStatService {
     }
 
     @Transactional
-    public BattleStatModeDTO getStat(Mode mode) {
+    public BattleStatModeDTO getBattleStat(Mode mode) {
         BattleStatModeDTO battleStatModeDTO = new BattleStatModeDTO();
         User user = getCurrentUser().get();
         Optional<List<BattleStat>> op = battleStatRepository.findAllByUserIdAndMode(user.getId(), mode);
@@ -53,10 +53,10 @@ public class BattleStatService {
             for (BattleStat battleStat : battleStats) {
                 WeaponDTO dto = WeaponDTO
                         .builder()
-                        .win(battleStat.getWins())
-                        .lose(battleStat.getLosses())
-                        .kill(battleStat.getKills())
-                        .death(battleStat.getDeaths())
+                        .wins(battleStat.getWins())
+                        .losses(battleStat.getLosses())
+                        .kills(battleStat.getKills())
+                        .deaths(battleStat.getDeaths())
                         .damage(battleStat.getDamage())
                         .build();
                 switch (battleStat.getWeapon()) {

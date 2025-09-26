@@ -1,4 +1,4 @@
-package org.ssafy.gamedataserver.dto.stat;
+package org.ssafy.gamedataserver.dto.battle;
 
 import lombok.Getter;
 import lombok.Setter;
