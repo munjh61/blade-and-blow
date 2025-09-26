@@ -6,9 +6,9 @@ import org.ssafy.gamedataserver.entity.battle.Mode;
 
 @Getter
 @Setter
-public class StatModeDTO {
+public class BattleStatModeDTO {
     private Mode mode;
-    private StatWeaponDTO sword;
-    private StatWeaponDTO bow;
-    private StatWeaponDTO wand;
+    private WeaponDTO sword;
+    private WeaponDTO bow;
+    private WeaponDTO wand;
 }

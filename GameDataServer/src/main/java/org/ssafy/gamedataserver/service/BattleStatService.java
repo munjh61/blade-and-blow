@@ -5,13 +5,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.ssafy.gamedataserver.dto.stat.StatModeDTO;
-import org.ssafy.gamedataserver.dto.stat.StatWeaponDTO;
+import org.ssafy.gamedataserver.dto.stat.BattleStatModeDTO;
+import org.ssafy.gamedataserver.dto.stat.WeaponDTO;
 import org.ssafy.gamedataserver.entity.battle.Mode;
-import org.ssafy.gamedataserver.entity.battle.Stat;
+import org.ssafy.gamedataserver.entity.battle.BattleStat;
 import org.ssafy.gamedataserver.entity.battle.Weapon;
 import org.ssafy.gamedataserver.entity.user.User;
-import org.ssafy.gamedataserver.repository.StatRepository;
+import org.ssafy.gamedataserver.repository.BattleStatRepository;
 import org.ssafy.gamedataserver.repository.UserRepository;
 
 import java.util.ArrayList;
@@ -20,18 +20,18 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class StatService {
+public class BattleStatService {
     private final UserRepository userRepository;
-    private final StatRepository statRepository;
+    private final BattleStatRepository battleStatRepository;
 
     @Transactional
     public void init() {
         Optional<User> user = getCurrentUser();
-        if (user.isPresent() && statRepository.existsByUserId(user.get().getId())) {
-            List<Stat> batch = new ArrayList<>(9);
+        if (user.isPresent() && battleStatRepository.existsByUserId(user.get().getId())) {
+            List<BattleStat> batch = new ArrayList<>(9);
             for (Mode mode : Mode.values()) {
                 for (Weapon weapon : Weapon.values()) {
-                    Stat r = Stat.builder()
+                    BattleStat r = BattleStat.builder()
                             .user(user.get())
                             .mode(mode)
                             .weapon(weapon)
@@ -39,36 +39,36 @@ public class StatService {
                     batch.add(r);
                 }
             }
-            statRepository.saveAll(batch);
+            battleStatRepository.saveAll(batch);
         }
     }
 
     @Transactional
-    public StatModeDTO getStat(Mode mode) {
-        StatModeDTO statModeDTO = new StatModeDTO();
+    public BattleStatModeDTO getStat(Mode mode) {
+        BattleStatModeDTO battleStatModeDTO = new BattleStatModeDTO();
         User user = getCurrentUser().get();
-        Optional<List<Stat>> op = statRepository.findAllByUserIdAndMode(user.getId(), mode);
+        Optional<List<BattleStat>> op = battleStatRepository.findAllByUserIdAndMode(user.getId(), mode);
         if (op.isPresent()) {
-            List<Stat> stats = op.get();
-            for (Stat stat : stats) {
-                StatWeaponDTO dto = StatWeaponDTO
+            List<BattleStat> battleStats = op.get();
+            for (BattleStat battleStat : battleStats) {
+                WeaponDTO dto = WeaponDTO
                         .builder()
-                        .win(stat.getWin())
-                        .lose(stat.getLose())
-                        .kill(stat.getKill())
-                        .death(stat.getDeath())
-                        .damage(stat.getDamage())
+                        .win(battleStat.getWins())
+                        .lose(battleStat.getLosses())
+                        .kill(battleStat.getKills())
+                        .death(battleStat.getDeaths())
+                        .damage(battleStat.getDamage())
                         .build();
-                switch (stat.getWeapon()) {
-                    case SWORD -> statModeDTO.setSword(dto);
-                    case BOW -> statModeDTO.setBow(dto);
-                    case WAND -> statModeDTO.setWand(dto);
+                switch (battleStat.getWeapon()) {
+                    case SWORD -> battleStatModeDTO.setSword(dto);
+                    case BOW -> battleStatModeDTO.setBow(dto);
+                    case WAND -> battleStatModeDTO.setWand(dto);
                 }
             }
         } else {
             init();
         }
-        return statModeDTO;
+        return battleStatModeDTO;
     }
 
     // 조회

@@ -7,7 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class StatWeaponDTO {
+public class WeaponDTO {
     private long win;
     private long lose;
     private long kill;

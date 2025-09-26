@@ -4,14 +4,14 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.ssafy.gamedataserver.entity.user.User;
 
-@Entity
-@Table(name = "stats")
+@Entity(name = "BattleStat")
+@Table(name = "battle_stats")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Stat {
+public class BattleStat {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -19,13 +19,13 @@ public class Stat {
     @JoinColumn
     private User user;
     @Column
-    private long win;
+    private long wins;
     @Column
-    private long lose;
+    private long losses;
     @Column
-    private long kill;
+    private long kills;
     @Column
-    private long death;
+    private long deaths;
     @Column
     private long damage;
     @Enumerated(EnumType.STRING)
