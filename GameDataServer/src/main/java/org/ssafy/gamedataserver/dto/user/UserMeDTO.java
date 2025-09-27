@@ -6,6 +6,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class UserMeDTO {
-    private Long userId;
+    private String username;
     private String nickname;
 }

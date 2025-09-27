@@ -80,11 +80,10 @@ public class AuthController {
             String accessToken = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS, ver);
             String refreshToken = jwtProvider.generateToken(username, JwtProvider.TokenType.REFRESH, ver);
             User user = userRepository.findByUsername(username).get();
-            long userId = user.getId();
             String nickname = user.getNickname();
 
             LoginDTO loginDTO = new LoginDTO();
-            loginDTO.setUserId(userId);
+            loginDTO.setUsername(username);
             loginDTO.setNickname(nickname);
             loginDTO.setAccessToken(accessToken);
             loginDTO.setRefreshToken(refreshToken);

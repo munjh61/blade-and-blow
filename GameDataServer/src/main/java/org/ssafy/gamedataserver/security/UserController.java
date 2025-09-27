@@ -26,7 +26,7 @@ public class UserController {
         if (getCurrentUser().isPresent()) {
             User user = getCurrentUser().get();
             UserMeDTO dto = new UserMeDTO();
-            dto.setUserId(user.getId());
+            dto.setUsername(user.getUsername());
             dto.setNickname(user.getNickname());
             return ResponseEntity.ok(ResponseDTO.ok("Got user Information Successfully!", dto));
         }
