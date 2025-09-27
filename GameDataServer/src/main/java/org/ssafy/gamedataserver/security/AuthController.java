@@ -44,9 +44,6 @@ public class AuthController {
 
         boolean isAlreadyTaken = userRepository.existsByUsername(username);
         boolean shortPassword = request.getPassword().length() < 8;
-        if(username.startsWith("Guest")){
-            return new ResponseEntity<>(ResponseDTO.fail("ID cannot Start with Guest", HttpStatus.BAD_REQUEST), HttpStatus.BAD_REQUEST);
-        }
         if (isAlreadyTaken) {
             return new ResponseEntity<>(ResponseDTO.fail("ID already exist", HttpStatus.CONFLICT), HttpStatus.CONFLICT);
         }
