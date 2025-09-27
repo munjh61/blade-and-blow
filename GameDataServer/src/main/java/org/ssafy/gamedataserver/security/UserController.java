@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.ssafy.gamedataserver.dto.ResponseDTO;
+import org.ssafy.gamedataserver.dto.user.UserMeDTO;
 import org.ssafy.gamedataserver.dto.user.UserNicknameDTO;
 import org.ssafy.gamedataserver.entity.user.User;
 import org.ssafy.gamedataserver.repository.UserRepository;
@@ -21,12 +22,13 @@ public class UserController {
 
     // 닉네임 조회
     @GetMapping("/me")
-    public ResponseEntity<ResponseDTO<UserNicknameDTO>> getNickname() {
+    public ResponseEntity<ResponseDTO<UserMeDTO>> getNickname() {
         if (getCurrentUser().isPresent()) {
             User user = getCurrentUser().get();
-            UserNicknameDTO dto = new UserNicknameDTO();
+            UserMeDTO dto = new UserMeDTO();
+            dto.setUserId(user.getId());
             dto.setNickname(user.getNickname());
-            return ResponseEntity.ok(ResponseDTO.ok("nickname checked successfully!", dto));
+            return ResponseEntity.ok(ResponseDTO.ok("Got user Information Successfully!", dto));
         }
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
