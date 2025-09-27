@@ -19,7 +19,7 @@ export const Introduce = () => {
     <div className="grow flex flex-col justify-evenly">
       <MainDescription text={description} />
       <div className="flex flex-col justify-center">
-        <TC st="예정일" sc="2025. 09. 31" />
+        <TC st="배포일" sc="2025. 09. 29" />
         <TC st="배포자" sc="SSAFY13_405_겜알못들" />
       </div>
     </div>
