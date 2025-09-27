@@ -3,6 +3,7 @@ package org.ssafy.gamedataserver.security;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,6 +13,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.ssafy.gamedataserver.dto.ResponseDTO;
+import org.ssafy.gamedataserver.dto.user.LoginDTO;
 import org.ssafy.gamedataserver.dto.user.UserDTO;
 import org.ssafy.gamedataserver.dto.user.UserSignUpDTO;
 import org.ssafy.gamedataserver.entity.user.Role;
@@ -22,6 +24,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -63,7 +66,7 @@ public class AuthController {
 
     // 로그인 → JWT 발급
     @PostMapping("/login")
-    public ResponseEntity<ResponseDTO<Map<String, String>>> login(@RequestBody UserDTO request) {
+    public ResponseEntity<ResponseDTO<LoginDTO>> login(@RequestBody UserDTO request) {
         String username = request.getUsername();
         String password = request.getPassword();
         //로그인 검증
@@ -76,10 +79,18 @@ public class AuthController {
 
             String accessToken = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS, ver);
             String refreshToken = jwtProvider.generateToken(username, JwtProvider.TokenType.REFRESH, ver);
-            String nickname = userRepository.findByUsername(username).get().getNickname();
+            User user = userRepository.findByUsername(username).get();
+            long userId = user.getId();
+            String nickname = user.getNickname();
+
+            LoginDTO loginDTO = new LoginDTO();
+            loginDTO.setUserId(userId);
+            loginDTO.setNickname(nickname);
+            loginDTO.setAccessToken(accessToken);
+            loginDTO.setRefreshToken(refreshToken);
 
             return ResponseEntity.ok(
-                    ResponseDTO.ok("Login successful", Map.of("nickname",nickname,"accessToken", accessToken, "refreshToken", refreshToken))
+                    ResponseDTO.ok("Login successful", loginDTO)
             );
 
         } catch (BadCredentialsException e) {

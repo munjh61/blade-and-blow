@@ -22,7 +22,7 @@ public class UserController {
 
     // 닉네임 조회
     @GetMapping("/me")
-    public ResponseEntity<ResponseDTO<UserMeDTO>> getNickname() {
+    public ResponseEntity<ResponseDTO<UserMeDTO>> getMe() {
         if (getCurrentUser().isPresent()) {
             User user = getCurrentUser().get();
             UserMeDTO dto = new UserMeDTO();
