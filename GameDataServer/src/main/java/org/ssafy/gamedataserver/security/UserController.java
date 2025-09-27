@@ -58,7 +58,7 @@ public class UserController {
         if (op.isPresent()) {
             User user = op.get();
 
-            boolean isAlreadyTaken = userRepository.existsByUsername(user.getUsername());
+            boolean isAlreadyTaken = userRepository.existsByUsername(userSignUpDTO.getUsername());
             boolean shortPassword = user.getPassword().length() < 8;
             if (isAlreadyTaken) {
                 return new ResponseEntity<>(ResponseDTO.fail("ID already exist", HttpStatus.CONFLICT), HttpStatus.CONFLICT);
