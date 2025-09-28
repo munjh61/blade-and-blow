@@ -34,6 +34,14 @@ services:
       - 127.0.0.1:6379:6379
     restart: unless-stopped
 
+  mongo:
+    image: mongo:7
+    volumes:
+      - /data/mongo:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
+    restart: unless-stopped
+
   api:
     build:
       context: ./GameDataServer
@@ -46,9 +54,11 @@ services:
       REDIS_PORT: 6379
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      MONGODB_URI: ${MONGODB_URI}
     ports:
       - "127.0.0.1:8081:8080"
     restart: unless-stopped
     depends_on:
       - mysql
       - redis
+      - mongo
