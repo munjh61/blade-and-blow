@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 // End-point URL 막아놓기
 @RestController
-@RequestMapping("/api/v1/ingame")
+@RequestMapping("/api/ingame")
 public class InGameController {
 	
 	// Service Instance 주입
