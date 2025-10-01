@@ -11,6 +11,7 @@ description = 'GameDataServer'
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
+        vendor = JvmVendorSpec.ORACLE
     }
 }
 
@@ -53,6 +54,15 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    
+    // Swagger
+	implementation 'io.swagger.core.v3:swagger-annotations:2.2.36'
+	
+	// MyBatis
+	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
+	
+	// MongoDB
+	implementation "org.springframework.boot:spring-boot-starter-data-mongodb" 
 }
 
 tasks.named('test') {

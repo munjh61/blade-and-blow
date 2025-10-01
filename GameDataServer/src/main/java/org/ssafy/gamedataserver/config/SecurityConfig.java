@@ -1,8 +1,10 @@
 package org.ssafy.gamedataserver.config;
 
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -18,9 +20,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.ssafy.gamedataserver.security.CustomUserDetailService;
 import org.ssafy.gamedataserver.security.JwtAuthenticationFilter;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Configuration
+@Profile("prod")
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final CustomUserDetailService customUserDetailService;

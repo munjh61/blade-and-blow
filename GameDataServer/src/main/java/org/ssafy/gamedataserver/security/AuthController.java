@@ -1,9 +1,16 @@
 package org.ssafy.gamedataserver.security;
 
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.UUID;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,7 +18,10 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.ssafy.gamedataserver.dto.ResponseDTO;
 import org.ssafy.gamedataserver.dto.user.LoginDTO;
 import org.ssafy.gamedataserver.dto.user.UserDTO;
@@ -20,9 +30,10 @@ import org.ssafy.gamedataserver.entity.user.Role;
 import org.ssafy.gamedataserver.entity.user.User;
 import org.ssafy.gamedataserver.repository.UserRepository;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 
 @Slf4j
 @RestController
@@ -34,7 +45,8 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final SessionVersionService sessionVersionService;
-
+    private final StringRedisTemplate redis;
+    
     // 회원가입
     @PostMapping("/signup")
     public ResponseEntity<ResponseDTO<Void>> signup(@RequestBody UserSignUpDTO request) {
@@ -66,19 +78,44 @@ public class AuthController {
 
     // 로그인 → JWT 발급
     @PostMapping("/login")
-    public ResponseEntity<ResponseDTO<LoginDTO>> login(@RequestBody UserDTO request) {
+    public ResponseEntity<ResponseDTO<LoginDTO>> login(@RequestBody UserDTO request, HttpServletRequest httpreq) {
+
         String username = request.getUsername();
         String password = request.getPassword();
+        
         //로그인 검증
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password)
             );
 
+            // JWT, Redis에 넣기 위한 변수 초기화
             long ver = sessionVersionService.setUserVersion(username);
-
+            String jti = UUID.randomUUID().toString();
+            long expireMinutes = 60;
+            
+            String ip = httpreq.getRemoteAddr();
+            String ua = httpreq.getHeader("User-Agent");
+            
+            // Token 생성 시, jti 반영해야 함.
             String accessToken = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS, ver);
             String refreshToken = jwtProvider.generateToken(username, JwtProvider.TokenType.REFRESH, ver);
+
+            //Redis에 로그인 세션 관리를 위한 데이터 관리
+            String sessionKey = "session:" + jti;
+            String sessionJson = String.format(
+            		"{\"user\":\"%s\",\"ver\":%d,\"exp\":%d,\"ip\":\"%s\",\"ua\":\"%s\"}",
+            		username, ver, expireMinutes, ip, ua
+            		);
+            
+            // Set으로 하나의 Session만 등록하게 함.
+            redis.opsForValue().set(sessionKey, sessionJson, Duration.ofMinutes(expireMinutes));
+            
+            // User별 session 관리
+            String userSessionKey = "user:"+ username + ":sessions";
+            redis.opsForSet().add(userSessionKey, jti);
+            redis.expire(userSessionKey, Duration.ofMinutes(expireMinutes));
+            
             User user = userRepository.findByUsername(username).get();
             String nickname = user.getNickname();
 
@@ -87,6 +124,7 @@ public class AuthController {
             loginDTO.setNickname(nickname);
             loginDTO.setAccessToken(accessToken);
             loginDTO.setRefreshToken(refreshToken);
+
 
             return ResponseEntity.ok(
                     ResponseDTO.ok("Login successful", loginDTO)
