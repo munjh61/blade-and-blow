@@ -76,6 +76,8 @@ public class AuthController {
 
         String username = request.getUsername();
         String password = request.getPassword();
+        String mac = request.getMac();
+        long deviceVer = sessionVersionService.setDeviceVersion(mac);
 
         Optional<User> op = userRepository.findByUsername(username);
         if(op.isPresent() && passwordEncoder.matches(password, op.get().getPassword())) {
@@ -83,13 +85,13 @@ public class AuthController {
             long id = op.get().getId();
             long ver = sessionVersionService.setUserVersion(id);
             String jti = UUID.randomUUID().toString();
-            Set<Role> roles = new HashSet<>();
+            Set<Role> roles = op.get().getRoles();
 
             String ip = httpreq.getRemoteAddr();
             String ua = httpreq.getHeader("User-Agent");
             // 토큰 생성
-            String accessToken = jwtProvider.generateToken(id, username, JwtProvider.TokenType.ACCESS, ver, roles);
-            String refreshToken = jwtProvider.generateToken(id, username, JwtProvider.TokenType.REFRESH, ver, roles);
+            String accessToken = jwtProvider.generateToken(id, username, roles, JwtProvider.TokenType.ACCESS, ver, mac, deviceVer);
+            String refreshToken = jwtProvider.generateToken(id, username, roles, JwtProvider.TokenType.REFRESH, ver, mac, deviceVer);
 
             LoginDTO loginDTO = new LoginDTO();
             loginDTO.setUsername(username);
@@ -145,12 +147,20 @@ public class AuthController {
             Set<Role> roleSet =jwtProvider.getRoles(refreshToken).stream().map(Role::valueOf).collect(Collectors.toSet());
             long tokenVer = jwtProvider.getVersion(refreshToken);
             long serverVer = sessionVersionService.getUserVersion(id);
+            String mac = jwtProvider.getMac(refreshToken);
+            long deviceVer = jwtProvider.getDeviceVersion(refreshToken);
+
             if (tokenVer != serverVer) {
                 return ResponseEntity
                         .status(HttpStatus.UNAUTHORIZED)
                         .body(ResponseDTO.fail("Somebody Log in with your ID", HttpStatus.UNAUTHORIZED));
             }
-            String newAccess = jwtProvider.generateToken(id, username, JwtProvider.TokenType.ACCESS, serverVer, roleSet);
+            if(serverVer != deviceVer) {
+                return ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body(ResponseDTO.fail("You had login with other account", HttpStatus.UNAUTHORIZED));
+            }
+            String newAccess = jwtProvider.generateToken(id, username, roleSet, JwtProvider.TokenType.ACCESS, serverVer, mac, deviceVer);
             return ResponseEntity.ok(
                     ResponseDTO.ok("Got a New accessToken", Map.of("accessToken", newAccess))
             );

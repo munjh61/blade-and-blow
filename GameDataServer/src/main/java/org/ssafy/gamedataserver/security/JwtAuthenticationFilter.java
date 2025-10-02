@@ -7,7 +7,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.ssafy.gamedataserver.entity.user.Role;
@@ -28,10 +27,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             if (jwtProvider.isTokenValid(token) && !jwtProvider.isRefreshToken(token)) {
+                // 한 아이디 한 곳 로그인 검사 재료
                 long id = jwtProvider.getUserId(token);
                 long tokenVer = jwtProvider.getVersion(token);
                 long serverVer = sessionVersionService.getUserVersion(id);
-                if (tokenVer == serverVer) {
+                // 한 디바이스 한번 로그인 검사 재료
+                String mac = jwtProvider.getMac(token);
+                long deviceVer = jwtProvider.getDeviceVersion(token);
+                long serverDeviceVer = sessionVersionService.getDeviceVersion(mac);
+                // 검사
+                if (tokenVer == serverVer && deviceVer == serverDeviceVer) {
                     String username = jwtProvider.getUsername(token);
                     Set<Role> roleSet = jwtProvider.getRoles(token).stream().map(Role::valueOf).collect(Collectors.toSet());
                     User user = User.builder()
@@ -41,7 +46,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .build();
                     CustomUserDetails userDetails = CustomUserDetails.from(user);
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    authentication.setDetails(authentication.getDetails());
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }

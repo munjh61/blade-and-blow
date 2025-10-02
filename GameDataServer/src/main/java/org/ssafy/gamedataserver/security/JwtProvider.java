@@ -41,9 +41,11 @@ public class JwtProvider {
     public String generateToken(
             Long id,
             String username,
+            Set<Role> roles,
             TokenType tokenType,
             long ver,
-            Set<Role> roles
+            String mac,
+            long deviceVer
     ) {
         Instant now = Instant.now();
         Duration life = (tokenType == TokenType.ACCESS)
@@ -55,10 +57,12 @@ public class JwtProvider {
                 .setSubject(id.toString())
                 .setIssuedAt(Date.from(now))
                 .setExpiration(expiry)
+                .claim("roles", roleNames)
                 .claim(CLAIM_TOKEN_TYPE, tokenType)
                 .claim("username", username)
                 .claim("ver", ver)
-                .claim("roles", roleNames)
+                .claim("mac", mac)
+                .claim("deviceVer", deviceVer)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -111,5 +115,13 @@ public class JwtProvider {
     // 버전
     public long getVersion(String token) {
         return getClaims(token).get("ver", Long.class);
+    }
+
+    public String getMac(String token) {
+        return getClaims(token).get("mac", String.class);
+    }
+
+    public long getDeviceVersion(String token) {
+        return getClaims(token).get("deviceVer", Long.class);
     }
 }
