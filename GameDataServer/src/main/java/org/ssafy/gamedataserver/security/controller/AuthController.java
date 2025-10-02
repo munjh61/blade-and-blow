@@ -4,19 +4,15 @@ import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import org.springframework.data.redis.core.StringRedisTemplate;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.http.HttpStatus;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.ssafy.gamedataserver.dto.ResponseDTO;
 import org.ssafy.gamedataserver.dto.user.LoginDTO;
 import org.ssafy.gamedataserver.dto.user.UserDTO;
@@ -35,142 +31,145 @@ import org.ssafy.gamedataserver.security.dto.RefreshTokenDTO;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final SessionVersionService sessionVersionService;
     private final StringRedisTemplate redis;
-    
-    // 회원가입
+
+    /* ====================== Sign Up ====================== */
+
     @PostMapping("/signup")
-    public ResponseEntity<ResponseDTO<Void>> signup(@RequestBody UserSignUpDTO request) {
-        String username = request.getUsername();
-        String password = passwordEncoder.encode(request.getPassword());
-        String nickname = request.getNickname();
+    public ResponseEntity<ResponseDTO<Void>> signup(@RequestBody UserSignUpDTO req) {
+        final String username = req.getUsername();
+        final String rawPassword = req.getPassword();
+        final String nickname = req.getNickname();
 
-        boolean isAlreadyTaken = userRepository.existsByUsername(username);
-        boolean shortPassword = request.getPassword().length() < 8;
-        if (isAlreadyTaken) {
-            return new ResponseEntity<>(ResponseDTO.fail("ID already exist", HttpStatus.CONFLICT), HttpStatus.CONFLICT);
+        if (userRepository.existsByUsername(username)) {
+            return ResponseDTO.conflict("ID already exist");
         }
-        if (shortPassword) {
-            return new ResponseEntity<>(ResponseDTO.fail("Password is has to be longer than 8 letters", HttpStatus.BAD_REQUEST), HttpStatus.BAD_REQUEST);
+        if (rawPassword == null || rawPassword.length() < 8) {
+            return ResponseDTO.badRequest("Password is has to be longer than 8 letters");
         }
 
-        User user = User.builder()
+        final String encoded = passwordEncoder.encode(rawPassword);
+        final User user = User.builder()
                 .username(username)
-                .password(password)
+                .password(encoded)
                 .nickname(nickname)
                 .roles(Collections.singleton(Role.USER))
                 .build();
 
         userRepository.save(user);
-        return ResponseEntity.ok(
-                ResponseDTO.ok("Welcome!", null)
-        );
+        return ResponseDTO.ok("Welcome!", null);
     }
 
-    // 로그인 → JWT 발급
+    /* ====================== Login ====================== */
+
     @PostMapping("/login")
-    public ResponseEntity<ResponseDTO<LoginDTO>> login(@RequestBody UserDTO request, HttpServletRequest httpreq) {
+    public ResponseEntity<ResponseDTO<LoginDTO>> login(@RequestBody UserDTO req, HttpServletRequest httpReq) {
+        final String username = req.getUsername();
+        final String password = req.getPassword();
+        final String mac = req.getMac();
 
-        String username = request.getUsername();
-        String password = request.getPassword();
-        String mac = request.getMac();
-        long deviceVer = sessionVersionService.setDeviceVersion(mac);
+        // 한 디바이스 1세션: 디바이스 버전 증가
+        final long deviceVer = sessionVersionService.setDeviceVersion(mac);
 
-        Optional<User> op = userRepository.findByUsername(username);
-        if(op.isPresent() && passwordEncoder.matches(password, op.get().getPassword())) {
-            // 토큰 생성 input
-            long id = op.get().getId();
-            long ver = sessionVersionService.setUserVersion(id);
-            String jti = UUID.randomUUID().toString();
-            Set<Role> roles = op.get().getRoles();
+        final Optional<User> op = userRepository.findByUsername(username);
+        if (op.isEmpty() || !passwordEncoder.matches(password, op.get().getPassword())) {
+            return ResponseDTO.unauthorized("Wrong ID or Password");
+        }
 
-            String ip = httpreq.getRemoteAddr();
-            String ua = httpreq.getHeader("User-Agent");
-            // 토큰 생성
-            String accessToken = jwtProvider.generateToken(id, username, roles, JwtProvider.TokenType.ACCESS, ver, mac, deviceVer);
-            String refreshToken = jwtProvider.generateToken(id, username, roles, JwtProvider.TokenType.REFRESH, ver, mac, deviceVer);
+        final User user = op.get();
+        final long id = user.getId();
+        final long ver = sessionVersionService.setUserVersion(id);     // 한 계정 1세션
+        final Set<Role> roles = user.getRoles();
 
-            LoginDTO loginDTO = new LoginDTO();
-            loginDTO.setUsername(username);
-            loginDTO.setNickname(op.get().getNickname());
-            loginDTO.setAccessToken(accessToken);
-            loginDTO.setRefreshToken(refreshToken);
+        // 토큰 생성
+        final String accessToken = jwtProvider.generateToken(id, username, roles, JwtProvider.TokenType.ACCESS, ver, mac, deviceVer);
+        final String refreshToken = jwtProvider.generateToken(id, username, roles, JwtProvider.TokenType.REFRESH, ver, mac, deviceVer);
 
-            // ========== Redis ===========
-            long expireMinutes = 60;
+        // 응답 DTO
+        final LoginDTO dto = new LoginDTO();
+        dto.setUsername(username);
+        dto.setNickname(user.getNickname());
+        dto.setAccessToken(accessToken);
+        dto.setRefreshToken(refreshToken);
 
-            //Redis에 로그인 세션 관리를 위한 데이터 관리
-            String sessionKey = "session:" + jti;
-            String sessionJson = String.format(
+        // Redis 세션 기록
+        writeRedisSession(username, ver, httpReq);
+
+        return ResponseDTO.ok("Login successful", dto);
+    }
+
+    /* ====================== Refresh ====================== */
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ResponseDTO<Map<String, String>>> refreshToken(@RequestBody RefreshTokenDTO req) {
+        final String refreshToken = req.getRefreshToken();
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return ResponseDTO.badRequest("No Refresh Token");
+        }
+
+        try {
+            if (!jwtProvider.isRefreshToken(refreshToken)) {
+                return ResponseDTO.unauthorized("Is Not Refresh Token");
+            }
+
+            final Long id = jwtProvider.getUserId(refreshToken);
+            final String username = jwtProvider.getUsername(refreshToken);
+            final Set<Role> roles = jwtProvider.getRoles(refreshToken).stream().map(Role::valueOf).collect(Collectors.toSet());
+            final long tokenVer = jwtProvider.getVersion(refreshToken);
+            final long serverVer = sessionVersionService.getUserVersion(id);
+
+            final String mac = jwtProvider.getMac(refreshToken);
+            if (mac == null || mac.isBlank()) {
+                return ResponseDTO.unauthorized("No MAC id");
+            }
+            final long tokenDeviceVer = jwtProvider.getDeviceVersion(refreshToken);
+            final long serverDeviceVer = sessionVersionService.getDeviceVersion(mac);
+
+            if (tokenVer != serverVer) {
+                return ResponseDTO.unauthorized("Somebody Log in with your ID");
+            }
+            if (tokenDeviceVer != serverDeviceVer) {
+                return ResponseDTO.unauthorized("You had login with other account");
+            }
+
+            final String newAccess = jwtProvider.generateToken(id, username, roles, JwtProvider.TokenType.ACCESS, serverVer, mac, serverDeviceVer);
+            return ResponseDTO.ok("Got a New accessToken", Map.of("accessToken", newAccess));
+
+        } catch (ExpiredJwtException e) {
+            return ResponseDTO.unauthorized("Refresh Token Expired");
+        } catch (JwtException e) {
+            return ResponseDTO.unauthorized("Refresh Token Not Valid");
+        }
+    }
+
+    /* ====================== Redis ====================== */
+
+    private void writeRedisSession(String username, long ver, HttpServletRequest req) {
+        try {
+            final long expireMinutes = 60;
+            final String jti = UUID.randomUUID().toString(); // 참고: 현재 JWT에는 jti 미포함
+
+            final String ip = req.getRemoteAddr();
+            final String ua = req.getHeader("User-Agent");
+
+            final String sessionKey = "session:" + jti;
+            final String sessionJson = String.format(
                     "{\"user\":\"%s\",\"ver\":%d,\"exp\":%d,\"ip\":\"%s\",\"ua\":\"%s\"}",
                     username, ver, expireMinutes, ip, ua
             );
 
-            // Set으로 하나의 Session만 등록하게 함.
             redis.opsForValue().set(sessionKey, sessionJson, Duration.ofMinutes(expireMinutes));
 
-            // User별 session 관리
-            String userSessionKey = "user:"+ username + ":sessions";
+            final String userSessionKey = "user:" + username + ":sessions";
             redis.opsForSet().add(userSessionKey, jti);
             redis.expire(userSessionKey, Duration.ofMinutes(expireMinutes));
-
-            // =============== Redis end ==================
-
-            return ResponseEntity.ok(
-                    ResponseDTO.ok("Login successful", loginDTO)
-            );
-        }
-        return  ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ResponseDTO.fail("Wrong ID or Password", HttpStatus.UNAUTHORIZED));
-    }
-
-    // 리프레시 토큰으로 엑세스 토큰 생성
-    @PostMapping("/refresh")
-    public ResponseEntity<ResponseDTO<Map<String, String>>> refreshToken(@RequestBody RefreshTokenDTO request) {
-        String refreshToken = request.getRefreshToken();
-        if (refreshToken == null || refreshToken.isBlank()) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(ResponseDTO.fail("No Refresh Token", HttpStatus.BAD_REQUEST));
-        }
-        try {
-            if (!jwtProvider.isRefreshToken(refreshToken)) {
-                return ResponseEntity
-                        .badRequest()
-                        .body(ResponseDTO.fail("Is Not Refresh Token", HttpStatus.UNAUTHORIZED));
-            }
-            Long id = jwtProvider.getUserId(refreshToken);
-            String username = jwtProvider.getUsername(refreshToken);
-            Set<Role> roleSet =jwtProvider.getRoles(refreshToken).stream().map(Role::valueOf).collect(Collectors.toSet());
-            long tokenVer = jwtProvider.getVersion(refreshToken);
-            long serverVer = sessionVersionService.getUserVersion(id);
-            String mac = jwtProvider.getMac(refreshToken);
-            long deviceVer = jwtProvider.getDeviceVersion(refreshToken);
-
-            if (tokenVer != serverVer) {
-                return ResponseEntity
-                        .status(HttpStatus.UNAUTHORIZED)
-                        .body(ResponseDTO.fail("Somebody Log in with your ID", HttpStatus.UNAUTHORIZED));
-            }
-            if(serverVer != deviceVer) {
-                return ResponseEntity
-                        .status(HttpStatus.UNAUTHORIZED)
-                        .body(ResponseDTO.fail("You had login with other account", HttpStatus.UNAUTHORIZED));
-            }
-            String newAccess = jwtProvider.generateToken(id, username, roleSet, JwtProvider.TokenType.ACCESS, serverVer, mac, deviceVer);
-            return ResponseEntity.ok(
-                    ResponseDTO.ok("Got a New accessToken", Map.of("accessToken", newAccess))
-            );
-        } catch (ExpiredJwtException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ResponseDTO.fail("Refresh Token Expired", HttpStatus.UNAUTHORIZED));
-        } catch (JwtException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ResponseDTO.fail("Refresh Token Not Valid", HttpStatus.UNAUTHORIZED));
+        } catch (Exception e) {
+            log.warn("Failed to write Redis session: {}", e.getMessage());
         }
     }
-
 }

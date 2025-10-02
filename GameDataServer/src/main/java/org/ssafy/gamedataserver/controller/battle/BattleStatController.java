@@ -17,6 +17,6 @@ public class BattleStatController {
     @GetMapping("/{mode}")
     public ResponseEntity<ResponseDTO<BattleStatModeDTO>> getStat(@PathVariable Mode mode) {
         BattleStatModeDTO battleStatModeDTO = battleStatService.getBattleStat(mode);
-        return ResponseEntity.ok(ResponseDTO.ok("Successfully Got Battle Stat", battleStatModeDTO));
+        return  ResponseDTO.ok("Successfully got Battle Stat", battleStatModeDTO);
     }
 }

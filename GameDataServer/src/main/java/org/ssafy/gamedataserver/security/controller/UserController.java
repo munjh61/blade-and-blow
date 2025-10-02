@@ -1,7 +1,6 @@
 package org.ssafy.gamedataserver.security.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,67 +19,64 @@ import java.util.Optional;
 @RequestMapping("/api/v1/user")
 @RequiredArgsConstructor
 public class UserController {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    // 닉네임 조회
+
+    // 내 정보 조회
     @GetMapping("/me")
     public ResponseEntity<ResponseDTO<UserMeDTO>> getMe() {
-        if (getCurrentUser().isPresent()) {
-            User user = getCurrentUser().get();
-            UserMeDTO dto = new UserMeDTO();
-            dto.setUsername(user.getUsername());
-            dto.setNickname(user.getNickname());
-            return ResponseEntity.ok(ResponseDTO.ok("Got user Information Successfully!", dto));
+        Optional<User> op = getCurrentUser();
+        if (op.isEmpty()) {
+            return ResponseDTO.notFound("user does not exist");
         }
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(ResponseDTO.fail("user does not exist", HttpStatus.NOT_FOUND));
+        User user = op.get();
+        UserMeDTO dto = new UserMeDTO();
+        dto.setUsername(user.getUsername());
+        dto.setNickname(user.getNickname());
+        return ResponseDTO.ok("Got user Information Successfully!", dto);
     }
 
     // 닉네임 변경
     @PutMapping("/nickname")
-    public ResponseEntity<ResponseDTO<Void>> changeNickname(@RequestBody UserNicknameDTO nickname) {
+    public ResponseEntity<ResponseDTO<Void>> changeNickname(@RequestBody UserNicknameDTO req) {
         Optional<User> op = getCurrentUser();
-        if (op.isPresent()) {
-            User user = op.get();
-            user.setNickname(nickname.getNickname());
-            userRepository.save(user);
-            return ResponseEntity.ok(ResponseDTO.ok("nickname changed successfully", null));
+        if (op.isEmpty()) {
+            return ResponseDTO.notFound("user does not exist");
         }
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(ResponseDTO.fail("user does not exist", HttpStatus.NOT_FOUND));
+        User user = op.get();
+        user.setNickname(req.getNickname());
+        userRepository.save(user);
+        return ResponseDTO.ok("nickname changed successfully", null);
     }
 
+    // 게스트 → 일반 유저 전환
     @PostMapping("/guestasuser")
-    public ResponseEntity<ResponseDTO<Void>> guestToSignupUser(@RequestBody UserSignUpDTO userSignUpDTO) {
-        Optional<User> op = getCurrentUser();
-        if (op.isPresent()) {
-            User user = op.get();
-
-            boolean isAlreadyTaken = userRepository.existsByUsername(userSignUpDTO.getUsername());
-            boolean shortPassword = user.getPassword().length() < 8;
-            if (isAlreadyTaken) {
-                return new ResponseEntity<>(ResponseDTO.fail("ID already exist", HttpStatus.CONFLICT), HttpStatus.CONFLICT);
-            }
-            if (shortPassword) {
-                return new ResponseEntity<>(ResponseDTO.fail("Password is has to be longer than 8 letters", HttpStatus.BAD_REQUEST), HttpStatus.BAD_REQUEST);
-            }
-            user.setUsername(userSignUpDTO.getUsername());
-            user.setPassword(passwordEncoder.encode(userSignUpDTO.getPassword()));
-            user.setNickname(userSignUpDTO.getNickname());
-            userRepository.save(user);
-            return ResponseEntity.ok(ResponseDTO.ok("guest account created successfully", null));
-        } else {
-          return ResponseEntity
-                  .status(HttpStatus.NOT_FOUND)
-                  .body(ResponseDTO.fail("user does not exist", HttpStatus.NOT_FOUND));
+    public ResponseEntity<ResponseDTO<Void>> guestToSignupUser(@RequestBody UserSignUpDTO req) {
+        // 가드: 아이디 중복 / 비밀번호 길이
+        if (userRepository.existsByUsername(req.getUsername())) {
+            return ResponseDTO.conflict("ID already exist");
         }
+        if (req.getPassword() == null || req.getPassword().length() < 8) {
+            return ResponseDTO.badRequest("Password is has to be longer than 8 letters");
+        }
+
+        Optional<User> op = getCurrentUser();
+        if (op.isEmpty()) {
+            return ResponseDTO.notFound("user does not exist");
+        }
+        User user = op.get();
+        user.setUsername(req.getUsername());
+        user.setPassword(passwordEncoder.encode(req.getPassword()));
+        user.setNickname(req.getNickname());
+        userRepository.save(user);
+        return ResponseDTO.ok("guest account created successfully", null);
     }
-    // 조회
+
+    // 현재 인증 사용자 조회
     private Optional<User> getCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        return userRepository.findByUsername(username);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) return Optional.empty();
+        return userRepository.findByUsername(auth.getName());
     }
 }
