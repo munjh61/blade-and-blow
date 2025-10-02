@@ -14,6 +14,6 @@ public class TestPublicController {
     @GetMapping("/ping")
     public ResponseEntity<ResponseDTO<Map<String,String>>> test(){
         String msg = "connect success msg";
-        return ResponseEntity.ok(ResponseDTO.ok("test success", Map.of("msg",msg)));
+        return ResponseEntity.ok(ResponseDTO.okDTO("test success", Map.of("msg",msg)));
     }
 }
