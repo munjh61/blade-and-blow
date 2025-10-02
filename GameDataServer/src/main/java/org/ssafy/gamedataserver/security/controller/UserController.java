@@ -1,4 +1,4 @@
-package org.ssafy.gamedataserver.security;
+package org.ssafy.gamedataserver.security.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

@@ -1,4 +1,4 @@
-package org.ssafy.gamedataserver.security;
+package org.ssafy.gamedataserver.security.dto;
 
 import lombok.Getter;
 import lombok.Setter;
