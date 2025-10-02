@@ -7,12 +7,15 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.ssafy.gamedataserver.entity.user.Role;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
+import java.util.Set;
 
 @Component
 public class JwtProvider {
@@ -29,37 +32,35 @@ public class JwtProvider {
             @Value("${jwt.access-token-minutes}") long accessMinutes,
             @Value("${jwt.refresh-token-days}") long refreshDays
     ) {
-        if (secret == null) throw new IllegalStateException("jwt.secret is null");
-        if (secret.getBytes(StandardCharsets.UTF_8).length < 32)
-            throw new IllegalStateException("jwt.secret must be at least 32 bytes");
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessMinutes = accessMinutes;
         this.refreshDays = refreshDays;
     }
 
     // 토큰 생성
-    public String generateToken(String username, TokenType tokenType, long ver) {
+    public String generateToken(
+            Long id,
+            String username,
+            TokenType tokenType,
+            long ver,
+            Set<Role> roles
+    ) {
         Instant now = Instant.now();
         Duration life = (tokenType == TokenType.ACCESS)
                 ? Duration.ofMinutes(accessMinutes)
                 : Duration.ofDays(refreshDays);
         Date expiry = Date.from(now.plus(life));
+        List<String> roleNames = roles.stream().map(Enum::name).toList();
         return Jwts.builder()
-                .setSubject(username)
+                .setSubject(id.toString())
                 .setIssuedAt(Date.from(now))
                 .setExpiration(expiry)
                 .claim(CLAIM_TOKEN_TYPE, tokenType)
+                .claim("username", username)
                 .claim("ver", ver)
+                .claim("roles", roleNames)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
-    }
-
-    // 토큰에서 사용자명 추출
-    public String getUsername(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token).getBody().getSubject();
     }
 
     // 토큰 유효성 검사
@@ -76,11 +77,25 @@ public class JwtProvider {
     }
 
     // 클레임 확인
-    public Claims getClaims(String token) {
+    private Claims getClaims(String token) {
         return Jwts.parserBuilder().
                 setSigningKey(key).
                 build()
                 .parseClaimsJws(token).getBody();
+    }
+
+    // 아이디
+    public String getUsername(String token) {
+        return getClaims(token).get("username", String.class);
+    }
+
+    // 아이디 pk
+    public Long getUserId(String token) {
+        return Long.parseLong(getClaims(token).getSubject());
+    }
+
+    public List<String> getRoles(String token) {
+        return getClaims(token).get("roles", List.class);
     }
 
     // 리프레시 토큰

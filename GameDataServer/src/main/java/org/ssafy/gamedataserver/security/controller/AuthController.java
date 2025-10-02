@@ -1,10 +1,9 @@
-package org.ssafy.gamedataserver.security;
+package org.ssafy.gamedataserver.security.controller;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import org.springframework.data.redis.core.StringRedisTemplate;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -13,10 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,17 +25,16 @@ import org.ssafy.gamedataserver.entity.user.Role;
 import org.ssafy.gamedataserver.entity.user.User;
 import org.ssafy.gamedataserver.repository.UserRepository;
 
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
+import org.ssafy.gamedataserver.security.JwtProvider;
+import org.ssafy.gamedataserver.security.SessionVersionService;
+import org.ssafy.gamedataserver.security.dto.RefreshTokenDTO;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
-    private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
@@ -82,67 +76,53 @@ public class AuthController {
 
         String username = request.getUsername();
         String password = request.getPassword();
-        
-        //로그인 검증
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, password)
-            );
 
-            // JWT, Redis에 넣기 위한 변수 초기화
-            long ver = sessionVersionService.setUserVersion(username);
+        Optional<User> op = userRepository.findByUsername(username);
+        if(op.isPresent() && passwordEncoder.matches(password, op.get().getPassword())) {
+            // 토큰 생성 input
+            long id = op.get().getId();
+            long ver = sessionVersionService.setUserVersion(id);
             String jti = UUID.randomUUID().toString();
-            long expireMinutes = 60;
-            
+            Set<Role> roles = new HashSet<>();
+
             String ip = httpreq.getRemoteAddr();
             String ua = httpreq.getHeader("User-Agent");
-            
-            // Token 생성 시, jti 반영해야 함.
-            String accessToken = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS, ver);
-            String refreshToken = jwtProvider.generateToken(username, JwtProvider.TokenType.REFRESH, ver);
+            // 토큰 생성
+            String accessToken = jwtProvider.generateToken(id, username, JwtProvider.TokenType.ACCESS, ver, roles);
+            String refreshToken = jwtProvider.generateToken(id, username, JwtProvider.TokenType.REFRESH, ver, roles);
+
+            LoginDTO loginDTO = new LoginDTO();
+            loginDTO.setUsername(username);
+            loginDTO.setNickname(op.get().getNickname());
+            loginDTO.setAccessToken(accessToken);
+            loginDTO.setRefreshToken(refreshToken);
+
+            // ========== Redis ===========
+            long expireMinutes = 60;
 
             //Redis에 로그인 세션 관리를 위한 데이터 관리
             String sessionKey = "session:" + jti;
             String sessionJson = String.format(
-            		"{\"user\":\"%s\",\"ver\":%d,\"exp\":%d,\"ip\":\"%s\",\"ua\":\"%s\"}",
-            		username, ver, expireMinutes, ip, ua
-            		);
-            
+                    "{\"user\":\"%s\",\"ver\":%d,\"exp\":%d,\"ip\":\"%s\",\"ua\":\"%s\"}",
+                    username, ver, expireMinutes, ip, ua
+            );
+
             // Set으로 하나의 Session만 등록하게 함.
             redis.opsForValue().set(sessionKey, sessionJson, Duration.ofMinutes(expireMinutes));
-            
+
             // User별 session 관리
             String userSessionKey = "user:"+ username + ":sessions";
             redis.opsForSet().add(userSessionKey, jti);
             redis.expire(userSessionKey, Duration.ofMinutes(expireMinutes));
-            
-            User user = userRepository.findByUsername(username).get();
-            String nickname = user.getNickname();
 
-            LoginDTO loginDTO = new LoginDTO();
-            loginDTO.setUsername(username);
-            loginDTO.setNickname(nickname);
-            loginDTO.setAccessToken(accessToken);
-            loginDTO.setRefreshToken(refreshToken);
-
+            // =============== Redis end ==================
 
             return ResponseEntity.ok(
                     ResponseDTO.ok("Login successful", loginDTO)
             );
-
-        } catch (BadCredentialsException e) {
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body(ResponseDTO.fail("ID or Password is wrong", HttpStatus.UNAUTHORIZED));
-        } catch (UsernameNotFoundException | NoSuchElementException e) {
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body(ResponseDTO.fail("ID or Password is wrong", HttpStatus.UNAUTHORIZED)); // 아이디가 없는 거지만, 티를 내면 안됨
         }
-        // 내부적으로 이렇게 돌아감 authenticationManager ->
-        // DaoAuthenticationProvider ->
-        // 1. CustomUserDetailsService.loadUserByUsername(username) 호출,
-        // 2. PasswordEncoder.matches(raw, encoded) 검증,
+        return  ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ResponseDTO.fail("Wrong ID or Password", HttpStatus.UNAUTHORIZED));
     }
 
     // 리프레시 토큰으로 엑세스 토큰 생성
@@ -160,15 +140,17 @@ public class AuthController {
                         .badRequest()
                         .body(ResponseDTO.fail("Is Not Refresh Token", HttpStatus.UNAUTHORIZED));
             }
+            Long id = jwtProvider.getUserId(refreshToken);
             String username = jwtProvider.getUsername(refreshToken);
+            Set<Role> roleSet =jwtProvider.getRoles(refreshToken).stream().map(Role::valueOf).collect(Collectors.toSet());
             long tokenVer = jwtProvider.getVersion(refreshToken);
-            long serverVer = sessionVersionService.getUserVersion(username);
+            long serverVer = sessionVersionService.getUserVersion(id);
             if (tokenVer != serverVer) {
                 return ResponseEntity
                         .status(HttpStatus.UNAUTHORIZED)
                         .body(ResponseDTO.fail("Somebody Log in with your ID", HttpStatus.UNAUTHORIZED));
             }
-            String newAccess = jwtProvider.generateToken(username, JwtProvider.TokenType.ACCESS, serverVer);
+            String newAccess = jwtProvider.generateToken(id, username, JwtProvider.TokenType.ACCESS, serverVer, roleSet);
             return ResponseEntity.ok(
                     ResponseDTO.ok("Got a New accessToken", Map.of("accessToken", newAccess))
             );
