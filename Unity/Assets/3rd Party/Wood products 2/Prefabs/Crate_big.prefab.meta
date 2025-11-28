@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: de49971f04e49d3469405279c2afd0bc
+timeCreated: 1483892466
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 80094
+  packageName: Wood products
+  packageVersion: 1.0
+  assetPath: Assets/Wood products/Prefabs/Crate_big.prefab
+  uploadId: 154953
