@@ -1,0 +1,59 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+@import 'tailwindcss';
+
+/* ===== Tailwind v4 theme tokens ===== */
+@theme {
+  /* 기본 폰트 */
+  --default-font-family: 'Pretendard', system-ui, sans-serif;
+
+  /* 브랜드 색상 */
+  --color-brand-red: #ff3245;
+  --color-brand-orange: #ff6940;
+  --color-brand-yellow: #ffa600;
+  --color-brand-green: #6dc16a;
+  --color-brand-blue: #6083ee;
+  --color-brand-purple: #9d5eee;
+
+  /* 폰트 패밀리 토큰 */
+  --font-sans: 'Pretendard', system-ui, sans-serif;
+  --font-hakgyo: 'HakgyoansimDoldamB', sans-serif;
+  --font-outline: 'SDSamliphopangche_Outline', sans-serif;
+
+  /* 반응형 폰트 사이즈 */
+  --text-fluid-sm: clamp(0.875rem, 0.8vw + 0.55rem, 1rem);
+  --text-fluid-md: clamp(1rem, 1vw + 0.6rem, 1.25rem);
+  --text-fluid-lg: clamp(1.125rem, 1.2vw + 0.6rem, 1.5rem);
+  --text-fluid-xl: clamp(1.25rem, 1.6vw + 0.6rem, 2rem);
+
+  --leading-fluid-sm: 1.6;
+  --leading-fluid-md: 1.6;
+  --leading-fluid-lg: 1.5;
+  --leading-fluid-xl: 1.3;
+}
+
+/* ===== 폰트 페이스 ===== */
+@font-face {
+  font-family: 'SDSamliphopangche_Outline';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts-20-12@1.0/SDSamliphopangche_Outline.woff')
+    format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'HakgyoansimDoldamB';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2307-2@1.0/HakgyoansimDoldamB.woff2')
+    format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* ===== 커스텀 유틸 ===== */
+@layer utilities {
+  .only-one-line {
+    text-wrap: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+}

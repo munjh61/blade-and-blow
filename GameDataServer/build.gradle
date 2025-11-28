@@ -1,0 +1,78 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.5'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'org.ssafy'
+version = '0.0.1-SNAPSHOT'
+description = 'GameDataServer'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+        //vendor = JvmVendorSpec.ORACLE
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext { jjwtVersion = '0.11.5' }
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // JPA
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'com.mysql:mysql-connector-j' // MySQL 사용 시
+
+    // JWT (jjwt)
+    implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
+    runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
+    runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.apache.commons:commons-pool2'
+
+    // Mongo
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    
+    // Swagger
+	implementation 'io.swagger.core.v3:swagger-annotations:2.2.36'
+	
+	// MyBatis
+	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
+	
+	// MongoDB
+	implementation "org.springframework.boot:spring-boot-starter-data-mongodb" 
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// jar 파일 생성 시
+tasks.named('bootJar'){
+    archiveFileName = 'app.jar'
+    destinationDirectory = file("$projectDir")
+}
+
+tasks.named('jar'){enabled = false} // plain.jar 생성 방지

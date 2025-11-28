@@ -1,0 +1,64 @@
+version: "3.8"
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Seoul
+    volumes:
+      - /data/mysql:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --skip-name-resolve
+    restart: unless-stopped
+
+  redis:
+    image: redis/redis-stack-server:latest
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD}",
+      ]
+    volumes:
+      - /data/redis:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:latest
+    volumes:
+      - /data/mongo:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./GameDataServer
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      GAME_DB_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      TZ: Asia/Seoul
+      REDIS_PORT: 6379
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      MONGODB_URI: ${MONGODB_URI}
+    ports:
+      - "127.0.0.1:8081:8080"
+    restart: unless-stopped
+    depends_on:
+      - mysql
+      - redis
+      - mongo
